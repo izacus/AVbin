@@ -1,7 +1,11 @@
+# Needed for static linking
+--enable-pic
+
 # Don't need the executables
 --disable-ffmpeg
 --disable-ffserver
 --disable-ffplay
+--disable-ffprobe
 
 # Keep size down
 --disable-debug
@@ -10,7 +14,8 @@
 --disable-protocols
 --enable-protocol=file
 --disable-devices
+--disable-shared
 
 # These are usually disabled, but make sure
 --disable-network
-#--disable-zlib
+--disable-zlib

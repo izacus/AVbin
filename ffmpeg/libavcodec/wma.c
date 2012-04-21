@@ -20,6 +20,7 @@
  */
 
 #include "avcodec.h"
+#include "sinewin.h"
 #include "wma.h"
 #include "wmadata.h"
 
@@ -84,7 +85,7 @@ int av_cold ff_wma_get_frame_len_bits(int sample_rate, int version,
     } else if (sample_rate <= 22050 ||
              (sample_rate <= 32000 && version == 1)) {
         frame_len_bits = 10;
-    } else if (sample_rate <= 48000) {
+    } else if (sample_rate <= 48000 || version < 3) {
         frame_len_bits = 11;
     } else if (sample_rate <= 96000) {
         frame_len_bits = 12;
@@ -126,6 +127,7 @@ int ff_wma_init(AVCodecContext *avctx, int flags2)
     s->block_align = avctx->block_align;
 
     dsputil_init(&s->dsp, avctx);
+    ff_fmt_convert_init(&s->fmt_conv, avctx);
 
     if (avctx->codec->id == CODEC_ID_WMAV1) {
         s->version = 1;
@@ -135,6 +137,9 @@ int ff_wma_init(AVCodecContext *avctx, int flags2)
 
     /* compute MDCT block size */
     s->frame_len_bits = ff_wma_get_frame_len_bits(s->sample_rate, s->version, 0);
+    s->next_block_len_bits = s->frame_len_bits;
+    s->prev_block_len_bits = s->frame_len_bits;
+    s->block_len_bits      = s->frame_len_bits;
 
     s->frame_len = 1 << s->frame_len_bits;
     if (s->use_variable_block_len) {
@@ -217,13 +222,13 @@ int ff_wma_init(AVCodecContext *avctx, int flags2)
             high_freq = high_freq * 0.5;
         }
     }
-    dprintf(s->avctx, "flags2=0x%x\n", flags2);
-    dprintf(s->avctx, "version=%d channels=%d sample_rate=%d bitrate=%d block_align=%d\n",
+    av_dlog(s->avctx, "flags2=0x%x\n", flags2);
+    av_dlog(s->avctx, "version=%d channels=%d sample_rate=%d bitrate=%d block_align=%d\n",
             s->version, s->nb_channels, s->sample_rate, s->bit_rate,
             s->block_align);
-    dprintf(s->avctx, "bps=%f bps1=%f high_freq=%f bitoffset=%d\n",
+    av_dlog(s->avctx, "bps=%f bps1=%f high_freq=%f bitoffset=%d\n",
             bps, bps1, high_freq, s->byte_offset_bits);
-    dprintf(s->avctx, "use_noise_coding=%d use_exp_vlc=%d nb_block_sizes=%d\n",
+    av_dlog(s->avctx, "use_noise_coding=%d use_exp_vlc=%d nb_block_sizes=%d\n",
             s->use_noise_coding, s->use_exp_vlc, s->nb_block_sizes);
 
     /* compute the scale factor band sizes for each MDCT block size */

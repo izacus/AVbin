@@ -216,7 +216,7 @@ static av_cold int a64multi_init_encoder(AVCodecContext *avctx)
 
     avcodec_get_frame_defaults(&c->picture);
     avctx->coded_frame            = &c->picture;
-    avctx->coded_frame->pict_type = FF_I_TYPE;
+    avctx->coded_frame->pict_type = AV_PICTURE_TYPE_I;
     avctx->coded_frame->key_frame = 1;
     if (!avctx->codec_tag)
          avctx->codec_tag = AV_RL32("a64m");
@@ -252,7 +252,6 @@ static int a64multi_encode_frame(AVCodecContext *avctx, unsigned char *buf,
     int b_width;
 
     int req_size;
-    int num_frames   = c->mc_lifetime;
 
     int *charmap     = c->mc_charmap;
     uint8_t *colram  = c->mc_colram;
@@ -280,7 +279,6 @@ static int a64multi_encode_frame(AVCodecContext *avctx, unsigned char *buf,
         if (!c->mc_lifetime) return 0;
         /* no more frames in queue, prepare to flush remaining frames */
         if (!c->mc_frame_counter) {
-            num_frames = c->mc_lifetime;
             c->mc_lifetime = 0;
         }
         /* still frames in queue so limit lifetime to remaining frames */
@@ -290,7 +288,7 @@ static int a64multi_encode_frame(AVCodecContext *avctx, unsigned char *buf,
         /* fill up mc_meta_charset with data until lifetime exceeds */
         if (c->mc_frame_counter < c->mc_lifetime) {
             *p = *pict;
-            p->pict_type = FF_I_TYPE;
+            p->pict_type = AV_PICTURE_TYPE_I;
             p->key_frame = 1;
             to_meta_with_crop(avctx, p, meta + 32000 * c->mc_frame_counter);
             c->mc_frame_counter++;
@@ -362,7 +360,7 @@ static int a64multi_encode_frame(AVCodecContext *avctx, unsigned char *buf,
     return 0;
 }
 
-AVCodec a64multi_encoder = {
+AVCodec ff_a64multi_encoder = {
     .name           = "a64multi",
     .type           = AVMEDIA_TYPE_VIDEO,
     .id             = CODEC_ID_A64_MULTI,
@@ -370,12 +368,12 @@ AVCodec a64multi_encoder = {
     .init           = a64multi_init_encoder,
     .encode         = a64multi_encode_frame,
     .close          = a64multi_close_encoder,
-    .pix_fmts       = (enum PixelFormat[]) {PIX_FMT_GRAY8, PIX_FMT_NONE},
+    .pix_fmts       = (const enum PixelFormat[]) {PIX_FMT_GRAY8, PIX_FMT_NONE},
     .long_name      = NULL_IF_CONFIG_SMALL("Multicolor charset for Commodore 64"),
     .capabilities   = CODEC_CAP_DELAY,
 };
 
-AVCodec a64multi5_encoder = {
+AVCodec ff_a64multi5_encoder = {
     .name           = "a64multi5",
     .type           = AVMEDIA_TYPE_VIDEO,
     .id             = CODEC_ID_A64_MULTI5,
@@ -383,7 +381,7 @@ AVCodec a64multi5_encoder = {
     .init           = a64multi_init_encoder,
     .encode         = a64multi_encode_frame,
     .close          = a64multi_close_encoder,
-    .pix_fmts       = (enum PixelFormat[]) {PIX_FMT_GRAY8, PIX_FMT_NONE},
+    .pix_fmts       = (const enum PixelFormat[]) {PIX_FMT_GRAY8, PIX_FMT_NONE},
     .long_name      = NULL_IF_CONFIG_SMALL("Multicolor charset for Commodore 64, extended with 5th color (colram)"),
     .capabilities   = CODEC_CAP_DELAY,
 };

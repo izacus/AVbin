@@ -19,7 +19,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "avcodec.h"
-#include "bytestream.h"
 #include "png.h"
 
 const uint8_t ff_pngsig[8] = {137, 80, 78, 71, 13, 10, 26, 10};
@@ -31,18 +30,18 @@ const uint8_t ff_png_pass_ymask[NB_PASSES] = {
 };
 
 /* minimum x value */
-const uint8_t ff_png_pass_xmin[NB_PASSES] = {
+static const uint8_t ff_png_pass_xmin[NB_PASSES] = {
     0, 4, 0, 2, 0, 1, 0
 };
 
 /* x shift to get row width */
-const uint8_t ff_png_pass_xshift[NB_PASSES] = {
+static const uint8_t ff_png_pass_xshift[NB_PASSES] = {
     3, 3, 2, 2, 1, 1, 0
 };
 
 /* Mask to determine which pixels are valid in a pass */
 const uint8_t ff_png_pass_mask[NB_PASSES] = {
-    0x80, 0x08, 0x88, 0x22, 0xaa, 0x55, 0xff
+    0x01, 0x01, 0x11, 0x11, 0x55, 0x55, 0xff,
 };
 
 void *ff_png_zalloc(void *opaque, unsigned int items, unsigned int size)

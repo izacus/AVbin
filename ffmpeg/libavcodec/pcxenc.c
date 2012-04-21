@@ -20,20 +20,21 @@
  */
 
 /**
- * PCX image encoder
  * @file
+ * PCX image encoder
  * @author Daniel Verkamp
- * @sa http://www.qzx.com/pc-gpe/pcx.txt
+ * @see http://www.qzx.com/pc-gpe/pcx.txt
  */
 
 #include "avcodec.h"
 #include "bytestream.h"
+#include "libavutil/imgutils.h"
 
 typedef struct PCXContext {
     AVFrame picture;
 } PCXContext;
 
-static const uint32_t monoblack_pal[] = { 0x000000, 0xFFFFFF };
+static const uint32_t monoblack_pal[16] = { 0x000000, 0xFFFFFF };
 
 static av_cold int pcx_encode_init(AVCodecContext *avctx)
 {
@@ -105,10 +106,11 @@ static int pcx_encode_frame(AVCodecContext *avctx,
 
     int bpp, nplanes, i, y, line_bytes, written;
     const uint32_t *pal = NULL;
+    uint32_t palette256[256];
     const uint8_t *src;
 
     *pict = *(AVFrame *)data;
-    pict->pict_type = FF_I_TYPE;
+    pict->pict_type = AV_PICTURE_TYPE_I;
     pict->key_frame = 1;
 
     if (avctx->width > 65535 || avctx->height > 65535) {
@@ -126,6 +128,11 @@ static int pcx_encode_frame(AVCodecContext *avctx,
     case PIX_FMT_RGB4_BYTE:
     case PIX_FMT_BGR4_BYTE:
     case PIX_FMT_GRAY8:
+        bpp = 8;
+        nplanes = 1;
+        ff_set_systematic_pal2(palette256, avctx->pix_fmt);
+        pal = palette256;
+        break;
     case PIX_FMT_PAL8:
         bpp = 8;
         nplanes = 1;
@@ -189,14 +196,13 @@ static int pcx_encode_frame(AVCodecContext *avctx,
     return buf - buf_start;
 }
 
-AVCodec pcx_encoder = {
-    "pcx",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_PCX,
-    sizeof(PCXContext),
-    pcx_encode_init,
-    pcx_encode_frame,
-    NULL,
+AVCodec ff_pcx_encoder = {
+    .name           = "pcx",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_PCX,
+    .priv_data_size = sizeof(PCXContext),
+    .init           = pcx_encode_init,
+    .encode         = pcx_encode_frame,
     .pix_fmts = (const enum PixelFormat[]){
         PIX_FMT_RGB24,
         PIX_FMT_RGB8, PIX_FMT_BGR8, PIX_FMT_RGB4_BYTE, PIX_FMT_BGR4_BYTE, PIX_FMT_GRAY8, PIX_FMT_PAL8,

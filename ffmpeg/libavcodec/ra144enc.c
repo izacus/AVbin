@@ -29,7 +29,6 @@
 
 #include "avcodec.h"
 #include "put_bits.h"
-#include "lpc.h"
 #include "celp_filters.h"
 #include "ra144.h"
 
@@ -37,6 +36,7 @@
 static av_cold int ra144_encode_init(AVCodecContext * avctx)
 {
     RA144Context *ractx;
+    int ret;
 
     if (avctx->sample_fmt != AV_SAMPLE_FMT_S16) {
         av_log(avctx, AV_LOG_ERROR, "invalid sample format\n");
@@ -53,7 +53,16 @@ static av_cold int ra144_encode_init(AVCodecContext * avctx)
     ractx->lpc_coef[0] = ractx->lpc_tables[0];
     ractx->lpc_coef[1] = ractx->lpc_tables[1];
     ractx->avctx = avctx;
-    dsputil_init(&ractx->dsp, avctx);
+    ret = ff_lpc_init(&ractx->lpc_ctx, avctx->frame_size, LPC_ORDER,
+                      FF_LPC_TYPE_LEVINSON);
+    return ret;
+}
+
+
+static av_cold int ra144_encode_close(AVCodecContext *avctx)
+{
+    RA144Context *ractx = avctx->priv_data;
+    ff_lpc_end(&ractx->lpc_ctx);
     return 0;
 }
 
@@ -205,7 +214,7 @@ static int adaptive_cb_search(const int16_t *adapt_cb, float *work,
     ff_celp_lp_synthesis_filterf(work, coefs, exc, BLOCKSIZE, LPC_ORDER);
     for (i = 0; i < BLOCKSIZE; i++)
         data[i] -= best_gain * work[i];
-    return (best_vect - BLOCKSIZE / 2 + 1);
+    return best_vect - BLOCKSIZE / 2 + 1;
 }
 
 
@@ -451,8 +460,8 @@ static int ra144_encode_frame(AVCodecContext *avctx, uint8_t *frame,
     energy = ff_energy_tab[quantize(ff_t_sqrt(energy >> 5) >> 10, ff_energy_tab,
                                     32)];
 
-    ff_lpc_calc_coefs(&ractx->dsp, lpc_data, NBLOCKS * BLOCKSIZE, LPC_ORDER,
-                      LPC_ORDER, 16, lpc_coefs, shift, AV_LPC_TYPE_LEVINSON,
+    ff_lpc_calc_coefs(&ractx->lpc_ctx, lpc_data, NBLOCKS * BLOCKSIZE, LPC_ORDER,
+                      LPC_ORDER, 16, lpc_coefs, shift, FF_LPC_TYPE_LEVINSON,
                       0, ORDER_METHOD_EST, 12, 0);
     for (i = 0; i < LPC_ORDER; i++)
         block_coefs[NBLOCKS - 1][i] = -(lpc_coefs[LPC_ORDER - 1][i] <<
@@ -468,7 +477,10 @@ static int ra144_encode_frame(AVCodecContext *avctx, uint8_t *frame,
          * The filter is unstable: use the coefficients of the previous frame.
          */
         ff_int_to_int16(block_coefs[NBLOCKS - 1], ractx->lpc_coef[1]);
-        ff_eval_refl(lpc_refl, block_coefs[NBLOCKS - 1], avctx);
+        if (ff_eval_refl(lpc_refl, block_coefs[NBLOCKS - 1], avctx)) {
+            /* the filter is still unstable. set reflection coeffs to zero. */
+            memset(lpc_refl, 0, sizeof(lpc_refl));
+        }
     }
     init_put_bits(&pb, frame, buf_size);
     for (i = 0; i < LPC_ORDER; i++) {
@@ -499,13 +511,15 @@ static int ra144_encode_frame(AVCodecContext *avctx, uint8_t *frame,
 }
 
 
-AVCodec ra_144_encoder =
-{
-    "real_144",
-    AVMEDIA_TYPE_AUDIO,
-    CODEC_ID_RA_144,
-    sizeof(RA144Context),
-    ra144_encode_init,
-    ra144_encode_frame,
-    .long_name = NULL_IF_CONFIG_SMALL("RealAudio 1.0 (14.4K) encoder"),
+AVCodec ff_ra_144_encoder = {
+    .name           = "real_144",
+    .type           = AVMEDIA_TYPE_AUDIO,
+    .id             = CODEC_ID_RA_144,
+    .priv_data_size = sizeof(RA144Context),
+    .init           = ra144_encode_init,
+    .encode         = ra144_encode_frame,
+    .close          = ra144_encode_close,
+    .sample_fmts    = (const enum AVSampleFormat[]){ AV_SAMPLE_FMT_S16,
+                                                     AV_SAMPLE_FMT_NONE },
+    .long_name      = NULL_IF_CONFIG_SMALL("RealAudio 1.0 (14.4K) encoder"),
 };

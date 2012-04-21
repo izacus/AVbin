@@ -21,10 +21,46 @@
 
 #include "avcodec.h"
 #include "ass.h"
+#include "libavutil/avstring.h"
 
-void ff_ass_init(AVSubtitle *sub)
+int ff_ass_subtitle_header(AVCodecContext *avctx,
+                           const char *font, int font_size,
+                           int color, int back_color,
+                           int bold, int italic, int underline,
+                           int alignment)
 {
-    memset(sub, 0, sizeof(*sub));
+    char header[512];
+
+    snprintf(header, sizeof(header),
+             "[Script Info]\r\n"
+             "ScriptType: v4.00+\r\n"
+             "\r\n"
+             "[V4+ Styles]\r\n"
+             "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding\r\n"
+             "Style: Default,%s,%d,&H%x,&H%x,&H%x,&H%x,%d,%d,%d,1,1,0,%d,10,10,10,0,0\r\n"
+             "\r\n"
+             "[Events]\r\n"
+             "Format: Layer, Start, End, Text\r\n",
+             font, font_size, color, color, back_color, back_color,
+             -bold, -italic, -underline, alignment);
+
+    avctx->subtitle_header = av_strdup(header);
+    if (!avctx->subtitle_header)
+        return AVERROR(ENOMEM);
+    avctx->subtitle_header_size = strlen(avctx->subtitle_header);
+    return 0;
+}
+
+int ff_ass_subtitle_header_default(AVCodecContext *avctx)
+{
+    return ff_ass_subtitle_header(avctx, ASS_DEFAULT_FONT,
+                                         ASS_DEFAULT_FONT_SIZE,
+                                         ASS_DEFAULT_COLOR,
+                                         ASS_DEFAULT_BACK_COLOR,
+                                         ASS_DEFAULT_BOLD,
+                                         ASS_DEFAULT_ITALIC,
+                                         ASS_DEFAULT_UNDERLINE,
+                                         ASS_DEFAULT_ALIGNMENT);
 }
 
 static int ts_to_string(char *str, int strlen, int ts)
@@ -62,8 +98,7 @@ int ff_ass_add_rect(AVSubtitle *sub, const char *dialog,
     rects[sub->num_rects]->type = SUBTITLE_ASS;
     rects[sub->num_rects]->ass  = av_malloc(len + dlen + 1);
     strcpy (rects[sub->num_rects]->ass      , header);
-    strncpy(rects[sub->num_rects]->ass + len, dialog, dlen);
-    rects[sub->num_rects]->ass[len+dlen] = 0;
+    av_strlcpy(rects[sub->num_rects]->ass + len, dialog, dlen + 1);
     sub->num_rects++;
     return dlen;
 }

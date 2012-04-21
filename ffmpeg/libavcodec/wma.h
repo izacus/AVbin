@@ -26,6 +26,7 @@
 #include "put_bits.h"
 #include "dsputil.h"
 #include "fft.h"
+#include "fmtconvert.h"
 
 /* size of blocks */
 #define BLOCK_MIN_BITS 7
@@ -64,6 +65,7 @@ typedef struct CoefVLCTable {
 
 typedef struct WMACodecContext {
     AVCodecContext* avctx;
+    AVFrame frame;
     GetBitContext gb;
     PutBitContext pb;
     int sample_rate;
@@ -112,17 +114,17 @@ typedef struct WMACodecContext {
     uint8_t ms_stereo;                      ///< true if mid/side stereo mode
     uint8_t channel_coded[MAX_CHANNELS];    ///< true if channel is coded
     int exponents_bsize[MAX_CHANNELS];      ///< log2 ratio frame/exp. length
-    DECLARE_ALIGNED(16, float, exponents)[MAX_CHANNELS][BLOCK_MAX_SIZE];
+    DECLARE_ALIGNED(32, float, exponents)[MAX_CHANNELS][BLOCK_MAX_SIZE];
     float max_exponent[MAX_CHANNELS];
     WMACoef coefs1[MAX_CHANNELS][BLOCK_MAX_SIZE];
-    DECLARE_ALIGNED(16, float, coefs)[MAX_CHANNELS][BLOCK_MAX_SIZE];
-    DECLARE_ALIGNED(16, FFTSample, output)[BLOCK_MAX_SIZE * 2];
+    DECLARE_ALIGNED(32, float, coefs)[MAX_CHANNELS][BLOCK_MAX_SIZE];
+    DECLARE_ALIGNED(32, FFTSample, output)[BLOCK_MAX_SIZE * 2];
     FFTContext mdct_ctx[BLOCK_NB_SIZES];
     float *windows[BLOCK_NB_SIZES];
     /* output buffer for one frame and the last for IMDCT windowing */
-    DECLARE_ALIGNED(16, float, frame_out)[MAX_CHANNELS][BLOCK_MAX_SIZE * 2];
+    DECLARE_ALIGNED(32, float, frame_out)[MAX_CHANNELS][BLOCK_MAX_SIZE * 2];
     /* last frame info */
-    uint8_t last_superframe[MAX_CODED_SUPERFRAME_SIZE + 4]; /* padding added */
+    uint8_t last_superframe[MAX_CODED_SUPERFRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE]; /* padding added */
     int last_bitoffset;
     int last_superframe_len;
     float noise_table[NOISE_TAB_SIZE];
@@ -134,6 +136,7 @@ typedef struct WMACodecContext {
     float lsp_pow_m_table1[(1 << LSP_POW_BITS)];
     float lsp_pow_m_table2[(1 << LSP_POW_BITS)];
     DSPContext dsp;
+    FmtConvertContext fmt_conv;
 
 #ifdef TRACE
     int frame_count;

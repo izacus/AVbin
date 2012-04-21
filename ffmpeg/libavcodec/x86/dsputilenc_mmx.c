@@ -35,7 +35,7 @@ static void get_pixels_mmx(DCTELEM *block, const uint8_t *pixels, int line_size)
     __asm__ volatile(
         "mov $-128, %%"REG_a"           \n\t"
         "pxor %%mm7, %%mm7              \n\t"
-        ASMALIGN(4)
+        ".p2align 4                     \n\t"
         "1:                             \n\t"
         "movq (%0), %%mm0               \n\t"
         "movq (%0, %2), %%mm2           \n\t"
@@ -97,7 +97,7 @@ static inline void diff_pixels_mmx(DCTELEM *block, const uint8_t *s1, const uint
     __asm__ volatile(
         "pxor %%mm7, %%mm7              \n\t"
         "mov $-128, %%"REG_a"           \n\t"
-        ASMALIGN(4)
+        ".p2align 4                     \n\t"
         "1:                             \n\t"
         "movq (%0), %%mm0               \n\t"
         "movq (%1), %%mm2               \n\t"
@@ -1098,10 +1098,12 @@ static int ssd_int8_vs_int16_mmx(const int8_t *pix1, const int16_t *pix2, int si
 void dsputilenc_init_mmx(DSPContext* c, AVCodecContext *avctx)
 {
     int mm_flags = av_get_cpu_flags();
+    int bit_depth = avctx->bits_per_raw_sample;
 
     if (mm_flags & AV_CPU_FLAG_MMX) {
         const int dct_algo = avctx->dct_algo;
-        if(dct_algo==FF_DCT_AUTO || dct_algo==FF_DCT_MMX){
+        if (avctx->bits_per_raw_sample <= 8 &&
+            (dct_algo==FF_DCT_AUTO || dct_algo==FF_DCT_MMX)) {
             if(mm_flags & AV_CPU_FLAG_SSE2){
                 c->fdct = ff_fdct_sse2;
             }else if(mm_flags & AV_CPU_FLAG_MMX2){
@@ -1111,7 +1113,8 @@ void dsputilenc_init_mmx(DSPContext* c, AVCodecContext *avctx)
             }
         }
 
-        c->get_pixels = get_pixels_mmx;
+        if (bit_depth <= 8)
+            c->get_pixels = get_pixels_mmx;
         c->diff_pixels = diff_pixels_mmx;
         c->pix_sum = pix_sum16_mmx;
 
@@ -1158,16 +1161,13 @@ void dsputilenc_init_mmx(DSPContext* c, AVCodecContext *avctx)
         }
 
         if(mm_flags & AV_CPU_FLAG_SSE2){
-            c->get_pixels = get_pixels_sse2;
+            if (bit_depth <= 8)
+                c->get_pixels = get_pixels_sse2;
             c->sum_abs_dctelem= sum_abs_dctelem_sse2;
 #if HAVE_YASM && HAVE_ALIGNED_STACK
             c->hadamard8_diff[0]= ff_hadamard8_diff16_sse2;
             c->hadamard8_diff[1]= ff_hadamard8_diff_sse2;
 #endif
-        }
-
-        if (CONFIG_LPC && mm_flags & (AV_CPU_FLAG_SSE2|AV_CPU_FLAG_SSE2SLOW)) {
-            c->lpc_compute_autocorr = ff_lpc_compute_autocorr_sse2;
         }
 
 #if HAVE_SSSE3

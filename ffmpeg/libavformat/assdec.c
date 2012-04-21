@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include "libavutil/mathematics.h"
 #include "avformat.h"
 #include "internal.h"
 
@@ -76,16 +77,16 @@ static int read_header(AVFormatContext *s, AVFormatParameters *ap)
 {
     int i, len, header_remaining;
     ASSContext *ass = s->priv_data;
-    ByteIOContext *pb = s->pb;
+    AVIOContext *pb = s->pb;
     AVStream *st;
     int allocated[2]={0};
     uint8_t *p, **dst[2]={0};
     int pos[2]={0};
 
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return -1;
-    av_set_pts_info(st, 64, 1, 100);
+    avpriv_set_pts_info(st, 64, 1, 100);
     st->codec->codec_type = AVMEDIA_TYPE_SUBTITLE;
     st->codec->codec_id= CODEC_ID_SSA;
 
@@ -168,7 +169,7 @@ static int read_seek2(AVFormatContext *s, int stream_index,
     ASSContext *ass = s->priv_data;
 
     if (flags & AVSEEK_FLAG_BYTE) {
-        return AVERROR_NOTSUPP;
+        return AVERROR(ENOSYS);
     } else if (flags & AVSEEK_FLAG_FRAME) {
         if (ts < 0 || ts >= ass->event_count)
             return AVERROR(ERANGE);
@@ -202,13 +203,13 @@ static int read_seek2(AVFormatContext *s, int stream_index,
     return 0;
 }
 
-AVInputFormat ass_demuxer = {
-    "ass",
-    NULL_IF_CONFIG_SMALL("Advanced SubStation Alpha subtitle format"),
-    sizeof(ASSContext),
-    probe,
-    read_header,
-    read_packet,
-    read_close,
-    .read_seek2  = read_seek2,
+AVInputFormat ff_ass_demuxer = {
+    .name           = "ass",
+    .long_name      = NULL_IF_CONFIG_SMALL("Advanced SubStation Alpha subtitle format"),
+    .priv_data_size = sizeof(ASSContext),
+    .read_probe     = probe,
+    .read_header    = read_header,
+    .read_packet    = read_packet,
+    .read_close     = read_close,
+    .read_seek2     = read_seek2,
 };

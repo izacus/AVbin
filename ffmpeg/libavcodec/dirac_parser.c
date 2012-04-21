@@ -194,7 +194,7 @@ static int dirac_combine_frame(AVCodecParserContext *s, AVCodecContext *avctx,
                 avctx->has_b_frames = 1;
         }
         if (avctx->has_b_frames && s->pts == s->dts)
-             s->pict_type = FF_B_TYPE;
+             s->pict_type = AV_PICTURE_TYPE_B;
 
         /* Finally have a complete Dirac data unit */
         *buf      = pc->dirac_unit;
@@ -247,10 +247,9 @@ static void dirac_parse_close(AVCodecParserContext *s)
         av_free(pc->buffer);
 }
 
-AVCodecParser dirac_parser = {
-    { CODEC_ID_DIRAC },
-    sizeof(DiracParseContext),
-    NULL,
-    dirac_parse,
-    dirac_parse_close,
+AVCodecParser ff_dirac_parser = {
+    .codec_ids      = { CODEC_ID_DIRAC },
+    .priv_data_size = sizeof(DiracParseContext),
+    .parser_parse   = dirac_parse,
+    .parser_close   = dirac_parse_close,
 };

@@ -241,7 +241,7 @@ static av_cold int encode_init(AVCodecContext* avc_context)
         header, comment, and tables.
 
         Each one is prefixed with a 16bit size, then they
-        are concatenated together into ffmpeg's extradata.
+        are concatenated together into libavcodec's extradata.
     */
     offset = 0;
 
@@ -357,7 +357,7 @@ static av_cold int encode_close(AVCodecContext* avc_context)
 }
 
 /** AVCodec struct exposed to libavcodec */
-AVCodec libtheora_encoder = {
+AVCodec ff_libtheora_encoder = {
     .name = "libtheora",
     .type = AVMEDIA_TYPE_VIDEO,
     .id = CODEC_ID_THEORA,
