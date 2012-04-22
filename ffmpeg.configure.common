@@ -16,6 +16,9 @@
 --disable-devices
 --disable-shared
 
+# HWaccels bring outside dependencies
+--disable-hwaccels
+
 # These are usually disabled, but make sure
 --disable-network
 --disable-zlib
