@@ -72,6 +72,8 @@ static void avbin_log_callback(void *ptr,
     user_log_callback(module, (AVbinLogLevel) level, message);
 }
 
+static uint32_t mt_thread_count = -1;
+
 int32_t avbin_get_version()
 {
     return AVBIN_VERSION;
@@ -91,6 +93,9 @@ int32_t avbin_have_feature(const char *feature)
 {
     if (strcmp(feature, "frame_rate") == 0)
         return 1;
+    if (strcmp(feature, "multithreading") == 0)
+        return 1;
+
     return 0;
 }
 
@@ -99,6 +104,12 @@ AVbinResult avbin_init()
     av_register_all();
     avcodec_register_all();
     return AVBIN_RESULT_OK;
+}
+
+AVbinResult avbin_init_mt(uint32_t thread_count)
+{
+   mt_thread_count = thread_count;
+   return avbin_init();
 }
 
 AVbinResult avbin_set_log_level(AVbinLogLevel level)
@@ -317,6 +328,12 @@ AVbinStream *avbin_open_stream(AVbinFile *file, int32_t index)
     codec = avcodec_find_decoder(codec_context->codec_id);
     if (!codec)
         return NULL;
+
+    // Setup multithreading if parameter was set
+    if (mt_thread_count >= 0)
+    {
+        codec_context->thread_count = mt_thread_count;
+    }
 
     if (avcodec_open2(codec_context, codec, NULL) < 0)
         return NULL;

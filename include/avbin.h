@@ -404,6 +404,7 @@ size_t avbin_get_audio_buffer_size();
  * functionality can be tested for by calling this function.  The following
  * features can be tested for:
  *  - "frame_rate"
+ *  - "multithreading"
  *
  * @retval 1 The feature is present
  * @retval 0 The feature is not present
@@ -417,9 +418,16 @@ int32_t avbin_have_feature(const char *feature);
 
 /**
  * Initialise AVbin.  This must be called before opening a file.  Check the
- * return value for success before continuing.
+ * return value for success before continuing. Alternatively, call avbin_init_mt() for multithreaded support.
  */
 AVbinResult avbin_init();
+
+/**
+ * Initialise AVBin. This or avbin_init() must be called before opening a file.
+ * Check the return value for success before continuing.
+ * @param   thread_counti   Number of threads to use for video decoding
+ */
+AVbinResult avbin_init_mt(uint32_t thread_count);
 
 /**
  * Set the log level verbosity.
