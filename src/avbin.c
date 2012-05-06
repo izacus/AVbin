@@ -238,7 +238,7 @@ AVbinResult avbin_file_info(AVbinFile *file, AVbinFileInfo *info)
     return AVBIN_RESULT_OK;
 }
 
-int32_t avbin_stream_info(AVbinFile *file, uint32_t stream_index,
+int32_t avbin_stream_info(AVbinFile *file, int32_t stream_index,
                       AVbinStreamInfo *info)
 {
     AVCodecContext *context = file->context->streams[stream_index]->codec;
