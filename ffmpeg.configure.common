@@ -1,6 +1,7 @@
 # Needed for static linking
 --enable-pic
-
+# SwScale acceleration
+--enable-runtime-cpudetect
 # Don't need the executables
 --disable-ffmpeg
 --disable-ffserver

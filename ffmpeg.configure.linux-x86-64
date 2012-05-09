@@ -3,7 +3,6 @@
 --enable-shared
 --enable-static
 
---disable-mmx
 --arch=x86_64
 #--cpu=i686
 
