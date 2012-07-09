@@ -16,9 +16,7 @@ STATIC_LIBS = $(LIBAV)/libavformat/libavformat.a \
 LIBS = -lSystem \
        -lz \
        -lbz2 \
-       /usr/lib/dylib1.o \
-       -L/usr/lib/gcc/i686-apple-darwin$(DARWIN_VERSION)/4.2.1/x86_64/ \
-       -lgcc
+       /usr/lib/dylib1.o
 
 $(LIBNAME) : $(OBJNAME) $(OUTDIR)
 	$(LD) $(LDFLAGS) -o $@ $< $(STATIC_LIBS) $(LIBS)

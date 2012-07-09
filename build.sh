@@ -82,10 +82,6 @@ build_libav() {
 	fi
     fi
 
-    # Remove -Werror options from config.mak that break builds on some platforms
-    cat config.mak | sed -e s/-Werror=implicit-function-declaration//g | sed -e s/-Werror=missing-prototypes//g > config.mak2
-    mv config.mak2 config.mak
-
     # Actually build Libav
     make -j3 || fail "Failed to build libav."
     popd
